@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>dataurl + resize</title>
+	<style>
+		#container {
+			width: 100px;
+		}
+		canvas {
+			border: 1px solid red;
+		}
+	</style>
+</head>
+<body>
+	<input type='file' multiple id='file'/>
+	<canvas width='500' height='500' id='canvas'></canvas>
+	<script>
+		window.onload = function() {
+			let files = document.getElementById('file');
+			let file = null;
+			let reader = new FileReader();
+
+			let canvas = document.getElementById('canvas');
+
+			let detector = new Detector(canvas);
+
+			reader.onload = () => {
+				let image = new Image();
+				image.src = reader.result;
+				image.onload = function() {
+					detector.drawZoomImage({
+						img: image,
+						w: image.width,
+						h: image.height
+					});
+					detector.faceDetector(image);
+				}
+			}
+
+			files.addEventListener('change', () => {
+				console.log(files.files);
+				if(files.files.length === 0) {
+					return;
+				}
+
+				file = files.files[0];
+				reader.readAsDataURL(file);
+			})
+		}
+
+		class Detector {
+			constructor(canvas, detectorOpt = {
+				fastMode: true,
+				maxDetectedFaces: 10
+			}) {
+				this.initCtx(canvas)
+					.catch(err => {
+						throw(new Error(err))
+					})
+				this.aspect = 1;
+				this.detector = new FaceDetector(detectorOpt);
+			}
+
+			initCtx(canvas) {
+					if(!canvas) {
+						this.canvas = document.createElement('canvas');
+						document.body.appendChild(this.canvas);
+					}else {
+						this.canvas = canvas;
+					}
+				return new Promise((resolve, reject) => {
+
+					this.ctx = this.canvas.getContext('2d');
+					if(!this.ctx) {
+						reject("you broswer does't support canvas");
+					}
+					resolve('ok');
+				})
+			}
+
+			drawOriginImage(img, s=0, e=0) {
+				if(!img) {
+					return;
+				}
+				this.ctx.drawImage(img, s, e);
+				return this;
+			}
+
+			drawZoomImage(image={
+				img: null,
+				w: 0,
+				h: 0
+			}) {
+				let scale = 1;
+				let canvas = this.canvas;
+				this.ctx.clearRect(0, 0, canvas.w, canvas.h);
+
+				if(image.w / canvas.width >= image.h / canvas.height) {
+					scale = image.h / image.w;
+					let scaleH = canvas.width * scale;
+					this.aspect = scaleH / image.height;
+					this.ctx.drawImage(image.img, 0, 0, image.w, image.h, 0, 0, canvas.width, scaleH);
+				}else {
+					scale = image.w / image.h;
+					let scaleW = canvas.height * scale;
+					this.aspect = scaleW / image.w;
+					this.ctx.drawImage(image.img, 0, 0, image.w, image.h, 0, 0, scaleW, canvas.height);
+				}
+			}
+
+			faceDetector(image) {
+				this.detector.detect(image)
+					.then(faces => {
+						ctx.lineWidth = 2;
+						ctx.strokeStyle = 'red';
+						faces.forEach(face => {
+							let box = face.boundingBox;
+							this.ctx.rect(Math.floor(box.x * this.aspect),
+									Math.floor(box.y * this.aspect),
+									Math.floor(box.width * this.aspect),
+									Math.floor(box.height * this.aspect),
+								)
+							this.ctx.stroke();
+						})
+					})
+					.catch(err => {
+						console.log(err.name)
+					})
+			}
+		}
+	</script>
+</body>
+</html>
