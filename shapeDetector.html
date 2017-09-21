@@ -3,15 +3,49 @@
 <head>
 	<title>shape detector</title>
 	<style>
-		body {
-			padding: 0;
-			margin: 0;
-		}
 		.file-container {
 			margin: 10px 0;
 		}
 		canvas {
 			border: 1px solid red;
+		}
+		.loading {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			display: none;
+			text-align: center;
+			background: rgba(255, 255, 255, .5);
+		}
+		.loading span {
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			margin: 150px 10px 0;
+			border-radius: 100%;
+			background: #e8e6e6;
+		}
+		.loading span:nth-child(1) {
+			animation: loading .5s ease-out infinite alternate backwards;
+		}
+		.loading span:nth-child(2) {
+			animation: loading .5s .2s ease-out infinite alternate backwards;
+		}
+		.loading span:nth-child(3) {
+			animation: loading .5s .4s ease-out infinite alternate backwards;
+		}
+		#image {
+			display: none;
+		}
+		@keyframes loading {
+			from {
+				transform: translateY(0);
+			}
+			to {
+				transform: translateY(-35px);
+			}
 		}
 	</style>
 </head>
@@ -24,6 +58,11 @@
 	<div id='tag-container'>
 		<input type='text' id='tag' />
 	</div>
+	<div class='loading' id='loading'>
+		<span></span>
+		<span></span>
+		<span></span>
+	</div>
 	<script>
 		window.onload = function() {
 			let files = document.getElementById('file');
@@ -34,26 +73,29 @@
 			let tag = document.getElementById('tag');
 			let btnDetector = document.getElementById('detector');
 			let face = null;
+			let loading = document.getElementById('loading');
+			let image = new Image();
 
 			reader.onload = () => {
-				let image = new Image();
-				image.src = reader.result;
 				image.onload = function() {
+					loading.style.display = 'none';
 					photoTag && photoTag.drawZoomImage({
 						img: image,
 						w: image.width,
 						h: image.height
 					});
+					image.style.display = 'block';
 				}
+				image.src = reader.result;
 			}
 
 			files.addEventListener('change', () => {
-				console.log(files.files);
 				if(files.files.length === 0) {
 					return;
 				}
 
 				reader.readAsDataURL(files.files[0]);
+				loading.style.display = 'block';
 			})
 
 			canvas.addEventListener('mousedown', e => {
@@ -74,8 +116,6 @@
 					photoTag.drawRect(face.boundingBox);
 				})
 
-				console.log(face.boundingBox.x)
-				console.log(face.boundingBox.y)
 				photoTag.drawText(tag.value, face.boundingBox.x, face.boundingBox.y - 50);
 			})
 
@@ -127,7 +167,7 @@
 			}) {
 				let scale = 1;
 				let canvas = this.canvas;
-				this.clearRect(0, 0, canvas.w, canvas.h);
+				this.clearRect(0, 0, canvas.width, canvas.height);
 
 				if(image.w / canvas.width >= image.h / canvas.height) {
 					scale = image.h / image.w;
