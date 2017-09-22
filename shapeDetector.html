@@ -9,6 +9,16 @@
 		canvas {
 			border: 1px solid red;
 		}
+		#detector-container {
+			position: relative;
+			margin-top: 20px;
+		}
+		.imgCanvas,
+		.signCanvas {
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
 		.loading {
 			position: absolute;
 			top: 0;
@@ -16,6 +26,8 @@
 			right: 0;
 			bottom: 0;
 			display: none;
+			width: 500px;
+			height: 500px;
 			text-align: center;
 			background: rgba(255, 255, 255, .5);
 		}
@@ -58,6 +70,8 @@
 	<div id='tag-container'>
 		<input type='text' id='tag' />
 	</div>
+	<div id='detector-container'>
+	</div>
 	<div class='loading' id='loading'>
 		<span></span>
 		<span></span>
@@ -68,7 +82,11 @@
 			let files = document.getElementById('file');
 			let reader = new FileReader();
 			let canvas = document.getElementById('canvas');
-			let photoTag = new PhotoTag(canvas);
+			let faceTag = new FaceTag({
+				containerId: 'detector-container',
+				canvasWidth: 500,
+				canvasHeight: 500,
+			});
 			let canvasBox = canvas.getBoundingClientRect();
 			let tag = document.getElementById('tag');
 			let btnDetector = document.getElementById('detector');
@@ -79,7 +97,7 @@
 			reader.onload = () => {
 				image.onload = function() {
 					loading.style.display = 'none';
-					photoTag && photoTag.drawZoomImage({
+					faceTag && faceTag.img.drawZoomImage({
 						img: image,
 						w: image.width,
 						h: image.height
@@ -103,7 +121,7 @@
 				let eX = e.x - canvasBox.left;
 				let eY = e.y - canvasBox.top;
 
-				face = photoTag && photoTag.findFace(eX, eY) || null;
+				face = faceTag && faceTag.signTool.findFace(eX, eY) || null;
 				tag.value = '';
 			});
 
@@ -111,43 +129,126 @@
 				if(!tag.value || !photoTag || !face) {
 					return;
 				}
-				photoTag.drawZoomImage();
-				photoTag.faces.forEach(face => {
-					photoTag.drawRect(face.boundingBox);
+				faceTag.drawZoomImage();
+				faceTag.faces.forEach(face => {
+					faceTag.drawRect(face.boundingBox);
 				})
 
-				photoTag.drawText(tag.value, face.boundingBox.x, face.boundingBox.y - 50);
+				faceTag.signTool.drawText(tag.value, face.boundingBox.x, face.boundingBox.y - 50);
 			})
 
 			btnDetector.addEventListener('click', () => {
-				photoTag && photoTag.faceDetector();
+				faceTag && faceTag.faceDetector();
 			})
 		}
 
-		class PhotoTag {
-			constructor(canvas, detectorOpt) {
-				this.initCtx(canvas)
-					.catch(err => {
-						throw(new Error(err))
-					})
-				this.aspect = 1;
-				this.detector = new FaceDetector(detectorOpt);
+		function isHTMLElement(dom) {
+			return dom && dom instanceof HTMLElement && dom.nodeType === 1;
+		}
+
+		class FaceTag {
+			constructor(opt={}) {
+				if(opt.containerId && typeof opt.containerId === 'string') {
+					this.container = document.getElementById(opt.containerId);
+				}else if(isHTMLElement(opt.container)) {
+					this.container = opt.containerId;
+				}else {
+					this.container = document.createElement('div');
+					document.body.appendChild(this.container);
+				}
+
+				let imgOpt = this.createOpt('imgCanvas', opt);
+				this.img = new ShowImg(imgOpt);
+
+				let signToolOpt = this.createOpt('signCanvas', opt);
+				this.signTool = new SignTool(signToolOpt);
+
+				this.detector = new FaceDetector(opt.detectorOpt);
+				
 			}
 
-			initCtx(canvas) {
-					if(!canvas) {
-						this.canvas = document.createElement('canvas');
-						document.body.appendChild(this.canvas);
-					}else {
-						this.canvas = canvas;
-					}
-				return new Promise((resolve, reject) => {
+			createOpt(className, opt) {
+				let canvas = this.createCanvas();
+				let ctx = this.getContext(canvas);
 
-					this.ctx = this.canvas.getContext('2d');
-					if(!this.ctx) {
-						reject("you broswer does't support canvas");
-					}
-				})
+				canvas.className = className;
+
+				this.resizeCanvas(canvas, {
+					w: opt.canvasWidth, 
+					h: opt.canvasHeight
+				});
+				this.mountCanvas(this.container, canvas);
+				return {canvas, ctx}
+			}
+
+			createCanvas() {
+				return document.createElement('canvas');
+			}
+
+			mountCanvas(container, child) {
+				container.appendChild(child);
+			}
+
+			resizeCanvas(canvas, size={w:0, h:0}) {
+				if(!this.isCanvas(canvas)) {
+					return false;
+				}
+
+				canvas.width = parseFloat(size.w),
+				canvas.height = parseFloat(size.h);
+
+				return true;
+			}
+
+			getContext(canvas) {
+				return this.isCanvas(canvas) && canvas.getContext('2d');
+			}
+
+			isCanvas(dom) {
+				return dom && dom.tagName.toLowerCase() === 'canvas';
+			}
+
+			faceDetector(img, aspect = 1) {
+				if(!img) {
+					img = new Image();
+					img.onload = this.detect(img);
+					img.src = this.img.getImage();
+				}else {
+					this.detect(img);
+				}
+			}
+
+			detect(img) {
+				this.detector.detect(img)
+					.then(faces => {
+						console.log(faces)
+						if(faces.length === 0) {
+							alert('检测不到面部哦');
+							return;
+						}
+						this.faces = faces;
+						this.ctx.lineWidth = 2;
+						this.ctx.strokeStyle = 'red';
+						faces.forEach(face => {
+							this.signTool.drawRect(face.boundingBox, aspect = 1);
+						})
+					})
+					.catch(err => {
+						console.log(err)
+					})
+			}
+		}
+
+		class ShowImg {
+			constructor(opt={}) {
+				if(typeof opt !== 'object' || !opt.canvas || !opt.ctx) {
+					alert('Missing canvas or ctx');
+					return;
+				}
+
+				this.canvas = opt.canvas;
+				this.ctx = opt.ctx;
+				this.aspect = 1;
 			}
 
 			drawOriginImage(img, s=0, e=0) {
@@ -185,30 +286,33 @@
 				this.image.src = this.canvas.toDataURL();
 			}
 
-			faceDetector(img=this.image, aspect = 1) {
-				if(!img) {
-					return;
-				}
-				this.detector.detect(img)
-					.then(faces => {
-						if(faces.length === 0) {
-							alert('检测不到面部哦');
-							return;
-						}
-						this.faces = faces;
-						this.ctx.lineWidth = 2;
-						this.ctx.strokeStyle = 'red';
-						faces.forEach(face => {
-							this.drawRect(face.boundingBox);
-						})
-					})
-					.catch(err => {
-						console.log(err)
-					})
+			getImage() {
+				return this.canvas.toDataURL();
 			}
 
 			clearRect(x, y, w, h) {
 				this.ctx.clearRect(x, y, w, h);
+			}
+		}
+
+		class SignTool {
+			constructor(opt={}) {
+				if(typeof opt !== 'object' || !opt.canvas || !opt.ctx) {
+					alert('Missing canvas or ctx');
+					return;
+				}
+
+				this.canvas = opt.canvas;
+				this.ctx = opt.ctx;
+			}
+
+			drawRect(rect={}, aspect = 1) {
+				this.ctx.rect(Math.floor(rect.x * aspect),
+								Math.floor(rect.y * aspect),
+								Math.floor(rect.width * aspect),
+								Math.floor(rect.height * aspect)
+							);
+				this.ctx.stroke();
 			}
 
 			/*
@@ -242,50 +346,41 @@
 				this.ctx.fillText(text, x, y)
 				this.ctx.restore();
 			}
-
-			drawRect(rect={}, aspect = 1) {
-				this.ctx.rect(Math.floor(rect.x * aspect),
-								Math.floor(rect.y * aspect),
-								Math.floor(rect.width * aspect),
-								Math.floor(rect.height * aspect)
-							);
-				this.ctx.stroke();
-			}
 		}
 
-		class Detector {
-			constructor(detectorOpt = {
-				fastMode: true,
-				maxDetectedFaces: 10
-			}) {
-				this.detector = new FaceDetector(detectorOpt);
-			}
+		// class Detector {
+		// 	constructor(detectorOpt = {
+		// 		fastMode: true,
+		// 		maxDetectedFaces: 10
+		// 	}) {
+		// 		this.detector = new FaceDetector(detectorOpt);
+		// 	}
 
 
-			faceDetector(image, aspect = 1) {
-				if(!image) {
-					return;
-				}
-				let self = this;
-				this.detector.detect(image)
-					.then(faces => {
-						console.log(self)
-						self.faces = faces;
-						self.ctx.lineWidth = 2;
-						self.ctx.strokeStyle = 'red';
-						faces.forEach(face => {
-							self.drawRect(face.boundingBox);
-						})
-					})
-					.catch(err => {
-						console.log(err)
-					})
-			}
+		// 	faceDetector(image, aspect = 1) {
+		// 		if(!image) {
+		// 			return;
+		// 		}
+		// 		let self = this;
+		// 		this.detector.detect(image)
+		// 			.then(faces => {
+		// 				console.log(self)
+		// 				self.faces = faces;
+		// 				self.ctx.lineWidth = 2;
+		// 				self.ctx.strokeStyle = 'red';
+		// 				faces.forEach(face => {
+		// 					self.drawRect(face.boundingBox);
+		// 				})
+		// 			})
+		// 			.catch(err => {
+		// 				console.log(err)
+		// 			})
+		// 	}
 
-			getIndex(x, y) {
-				return -1;
-			}
-		}
+		// 	getIndex(x, y) {
+		// 		return -1;
+		// 	}
+		// }
 	</script>
 </body>
 </html>
