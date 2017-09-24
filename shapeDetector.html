@@ -65,7 +65,8 @@
 	</div>
 	<div id='tag-container'>
 		<p>请在图中点击需标记的方框</p>
-		<input type='text' id='tag' />
+		<input type='text' id='tagText'/>
+		<button id='tag'>确定</button>
 	</div>
 	<div id='detector-container'>
 	</div>
@@ -79,9 +80,9 @@
 				canvasHeight: 500
 			});
 			let tag = document.getElementById('tag');
+			let tagText = document.getElementById('tagText');
+
 			let btnDetector = document.getElementById('detector');
-			let face = null;
-			let loading = document.getElementById('loading');
 			let image = new Image();
 
 			reader.onload = () => {
@@ -103,27 +104,29 @@
 
 				reader.readAsDataURL(files.files[0]);
 				faceTag.showLoading();
+				faceTag.img.clearRect();
+				faceTag.signTool.clearRect();
 			})
 
-			tag.addEventListener('blur', () => {
-				if(!tag.value || !photoTag || !face) {
+			tag.addEventListener('click', () => {
+				if(!tagText.value || !faceTag) {
 					return;
 				}
-				faceTag.drawZoomImage();
-				faceTag.faces.forEach(face => {
-					faceTag.drawRect(face.boundingBox);
-				})
 
-				faceTag.signTool.drawText(tag.value, face.boundingBox.x, face.boundingBox.y - 50);
+				faceTag.addTag(tagText.value);
 			})
 
 			btnDetector.addEventListener('click', () => {
 				faceTag.showLoading();
 				faceTag && faceTag.faceDetector()
 								.then(faces => {
+									faceTag.signTool.drawFaces(faces);
 									faceTag.hideLoading();
 								})
-								.catch(err => alert(err))
+								.catch(err => {
+									alert(err);
+									faceTag.hideLoading();
+								})
 			})
 		}
 
@@ -158,11 +161,19 @@
 				if(orignOpt.loading) {
 					this.appendLoading();
 				}
+
+				this.addEvent();
 				
 			}
 
+			/*
+			 * 创建 canvas 和 ctx
+			 * param {string} className canvas类名  'imgCanvas' 和 'signCanvas'
+			 * param {object} opt canvas的尺寸
+			 * return {object} canvas && ctx
+			 */
 			createOpt(className, opt) {
-				let canvas = this.createCanvas();
+				let canvas = document.createElement('canvas');
 				let ctx = this.getContext(canvas);
 
 				canvas.className = className;
@@ -175,14 +186,16 @@
 				return {canvas, ctx}
 			}
 
-			createCanvas() {
-				return document.createElement('canvas');
-			}
-
+			/*
+			 * 挂载 canvas
+			 */
 			mountCanvas(container, child) {
 				container.appendChild(child);
 			}
 
+			/*
+			 * 调整 canvas 尺寸
+			 */
 			resizeCanvas(canvas, size={w:0, h:0}) {
 				if(!this.isCanvas(canvas)) {
 					return false;
@@ -194,61 +207,46 @@
 				return true;
 			}
 
+			/*
+			 * 返回指定 canvas 的 ctx
+			 */
 			getContext(canvas) {
 				return this.isCanvas(canvas) && canvas.getContext('2d');
 			}
 
+			/*
+			 * 判断 dom 是否为 canvas
+			 */
 			isCanvas(dom) {
 				return dom && dom.tagName.toLowerCase() === 'canvas';
 			}
 
-			getImage() {
-				return this.img.getImage();
-			}
-
-			drawRect(box, aspect) {
-				this.signTool.drawRect(box, aspect);
-			}
-
-			getImageEle() {
-				return new Promise((resolve, reject) => {
-					let img = new Image();
-					img.onload = () => {
-						resolve(img);
-					};
-					img.error = err => {
-						reject(err);
-					}
-					img.src = this.getImage();
-				})
-			}
-
+			/*
+			 * 面部检测
+			 * param {number} aspect 图片压缩比例
+			 * return {Array} 检测到的面部
+			 */
 			faceDetector(aspect = 1) {
 				return new Promise((resolve, reject) => {
-					this.getImageEle()
-						.then(img => {
-							this.detector.detect(img)
-								.then(faces => {
-									if(faces.length === 0) {
-										reject('检测不到面部哦');
-									}else {
-										this.faces = faces;
-										this.drawFace(aspect);
-										resolve(this.faces);
-									}
-									this.signTool.faces = faces;
-								})
-								.catch(err => {
-									reject(err);
-								})
+					let img = this.img.getImage();
+					this.detector.detect(img)
+						.then(faces => {
+							if(faces.length === 0) {
+								reject('检测不到面部哦');
+							}else {
+								this.faces = faces;
+								resolve(this.faces);
+							}
+						})
+						.catch(err => {
+							reject(err);
 						})
 				})
 			}
 
-			drawFace(aspect = 1) {
-				this.signTool.drawFace(aspect);
-			}
-
+			/*
+			 * 添加 loading
+			 */
 			appendLoading() {
 				let fragment = document.createDocumentFragment(),
 					div = document.createElement('div'),
@@ -268,115 +266,34 @@
 				this.container && this.container.append(fragment);
 			}
 
+			/*
+			 * 显示 loading
+			 */
 			showLoading() {
 				this.loading.style.display = 'block';
 			}
 
+			/*
+			 * 隐藏 loading
+			 */
 			hideLoading() {
 				this.loading.style.display = 'none';
-			}
-		}
-
-		class ShowImg {
-			constructor(opt={}) {
-				if(typeof opt !== 'object' || !opt.canvas || !opt.ctx) {
-					alert('Missing canvas or ctx');
-					return;
-				}
-
-				this.canvas = opt.canvas;
-				this.ctx = opt.ctx;
-				this.aspect = 1;
-			}
-
-			drawOriginImage(img, s=0, e=0) {
-				img = img || this.image;
-				if(!img) {
-					return;
-				}
-				this.ctx.drawImage(img, s, e);
-				this.image = img;
-				return this;
-			}
-
-			drawZoomImage(image={
-				img: this.image,
-				w: 0,
-				h: 0
-			}) {
-				let scale = 1;
-				let canvas = this.canvas;
-				this.clearRect(0, 0, canvas.width, canvas.height);
-
-				if(image.w / canvas.width >= image.h / canvas.height) {
-					scale = image.h / image.w;
-					let scaleH = canvas.width * scale;
-					this.aspect = scaleH / image.height;
-					this.ctx.drawImage(image.img, 0, 0, image.w, image.h, 0, 0, canvas.width, scaleH);
-				}else {
-					scale = image.w / image.h;
-					let scaleW = canvas.height * scale;
-					this.aspect = scaleW / image.w;
-					this.ctx.drawImage(image.img, 0, 0, image.w, image.h, 0, 0, scaleW, canvas.height);
-				}
-				// 保存缩放后的照片
-				this.image = new Image();
-				this.image.src = this.canvas.toDataURL();
-			}
-
-			getImage() {
-				return this.canvas.toDataURL();
-			}
-
-			clearRect(x, y, w, h) {
-				this.ctx.clearRect(x, y, w, h);
-			}
-		}
-
-		class SignTool {
-			constructor(opt={}) {
-				if(typeof opt !== 'object' || !opt.canvas || !opt.ctx) {
-					alert('Missing canvas or ctx');
-					return;
-				}
-
-				this.canvas = opt.canvas;
-				this.ctx = opt.ctx;
-				this.canvasBox = this.canvas.getBoundingClientRect();
-
-				this.addEvent();
-			}
-
-			drawFace(aspect = 1) {
-				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-				this.faces && this.faces.length > 0 && this.faces.forEach(face => {
-					this.drawRect(face.boundingBox, aspect);
-				})
-			}
-
-			drawRect(rect={}, aspect = 1) {
-				this.ctx.save()
-				this.ctx.lineWidth = rect.lineWidth || 2;
-				this.ctx.strokeStyle = rect.color || 'red';
-				this.ctx.rect(Math.floor(rect.x * aspect),
-								Math.floor(rect.y * aspect),
-								Math.floor(rect.width * aspect),
-								Math.floor(rect.height * aspect)
-							);
-				this.ctx.stroke();
-				this.ctx.restore();
 			}
 
 			/*
 			 * 查找(x,y)是否在某个面部区域内
+			 * param {Image} img 需要检测的图像
+			 * param {Number} x 横坐标
+			 * param {Number} y 纵坐标
+			 * return {DetectorFce | String} 检测结果 
 			 */
-			findFace(x, y) {
+			findFace(img, x, y) {
 				return new Promise((resolve, reject) => {
 					if(!this.faces || this.faces.length <= 0 || x < 0 || y < 0) {
 						reject('none');
 					}
 
-					if(!this.image && (x > this.image.width || y > this.image.height)) {
+					if(!img && (x > this.img.width || y > this.img.height)) {
 						reject('none');
 					}
 
@@ -396,53 +313,190 @@
 				})
 			}
 
+			/*
+			 * 面部高亮
+			 * param {DetectorFce} face 需要高亮的部分
+			 */
+			heightLighRect(face) {
+				let box = face.boundingBox;
+				this.signTool.drawRect({
+					x: box.x,
+					y: box.y,
+					width: box.width,
+					height: box.height,
+					color: 'green'
+				})
+			}
+
+			/*
+			 * signTool 的 canvas 添加点击事件
+			 */
 			addEvent() {
-				if(!this.canvas) {
+				if(!this.signTool.canvas) {
 					return;
 				}
 
-				this.canvas.addEventListener('click', e => {
+				let canvas = this.signTool.canvas;
+				let canvasBox = canvas.getBoundingClientRect();
+
+				canvas.addEventListener('click', e => {
 					// 计算鼠标在canvas中的位置
-					let eX = e.clientX - this.canvasBox.left;
-					let eY = e.clientY - this.canvasBox.top;
-					this.heightLighRect(eX, eY)
-						.catch(err => {
-							alert(err)
+					let eX = e.clientX - canvasBox.left;
+					let eY = e.clientY - canvasBox.top;
+
+					this.findFace(this.img.getImage(), eX, eY)
+						.then(face => {
+							this.signTool.drawFaces(this.faces);
+							this.heightLighRect(face);
+							this.beTagFace = face;
 						})
 				})
 			}
 
-			heightLighRect(x, y) {
-				alert(this.findFace)
-					this.findFace(x, y)
-						.then(face => {
-							alert(face)
-							console.log(face)
-							let box = face.boundingBox;
-							this.clearRect(box.x, box.y, box.width, box.height);
-							this.drawRect({
-								x: box.x,
-								y: box.y,
-								width: box.width,
-								height: box.height,
-								color: 'green'
-							})
-							this.chooseFace = face;
-						})
-					tag.value = '';
+			addTag(text, color='white', offsetX=0, offsetY=0) {
+				if(!this.beTagFace) {
+					alert('请选择需要标识的面部')
+					return;
+				}
+
+				let box = this.beTagFace.boundingBox;
+				let x = box.x + offsetX;
+				let y = box.y < 80 ? box.y + box.height + 10 : box.y - 35;
+				y += offsetY;
+
+				this.signTool.clearRect(x, y, box.width, 30);
+				this.signTool.drawText(text, x, y, color);
+			}
+		}
+
+		class ShowImg {
+			constructor(opt={}) {
+				if(typeof opt !== 'object' || !opt.canvas || !opt.ctx) {
+					alert('Missing canvas or ctx');
+					return;
+				}
+
+				this.canvas = opt.canvas;
+				this.ctx = opt.ctx;
+				this.aspect = 1;
 			}
 
+			/*
+			 * 图片按厡比例绘制
+			 */
+			drawOriginImage(img, s=0, e=0) {
+				img = img || this.image;
+				if(!img) {
+					return;
+				}
+				this.ctx.drawImage(img, s, e);
+				this.image = this.image || new Image();
+				this.image.src = this.canvas.toDataURL();
+			}
+
+			/*
+			 * 缩放图像
+			 */
+			drawZoomImage(image={
+				img: this.image,
+				w: 0,
+				h: 0
+			}) {
+				if(!image.img) {
+					return;
+				}
+				let scale = 1;
+				let canvas = this.canvas;
+				this.clearRect(0, 0, canvas.width, canvas.height);
+
+				if(image.w / canvas.width >= image.h / canvas.height) {
+					scale = image.h / image.w;
+					let scaleH = canvas.width * scale;
+					this.aspect = scaleH / image.height;
+					this.ctx.drawImage(image.img, 0, 0, image.w, image.h, 0, 0, canvas.width, scaleH);
+				}else {
+					scale = image.w / image.h;
+					let scaleW = canvas.height * scale;
+					this.aspect = scaleW / image.w;
+					this.ctx.drawImage(image.img, 0, 0, image.w, image.h, 0, 0, scaleW, canvas.height);
+				}
+				// 保存缩放后的照片
+				this.image = this.image || new Image();
+				this.image.src = this.canvas.toDataURL();
+			}
+
+			/*
+			 * 获取 canvas 图像
+			 */
+			getImage() {
+				return this.image || this.canvas.toDataURL();
+			}
+
+			/*
+			 * 清除
+			 */
+			clearRect(x=0, y=0, w=this.canvas.width, h=this.canvas.height) {
+				this.ctx.clearRect(x, y, w, h);
+			}
+		}
+
+		class SignTool {
+			constructor(opt={}) {
+				if(typeof opt !== 'object' || !opt.canvas || !opt.ctx) {
+					alert('Missing canvas or ctx');
+					return;
+				}
+
+				this.canvas = opt.canvas;
+				this.ctx = opt.ctx;
+				this.canvasBox = this.canvas.getBoundingClientRect();
+			}
+
+			/*
+			 * 标识面部
+			 * param {Array} faces 需要标识的部分
+			 */
+			drawFaces(faces=[], aspect = 1) {
+				faces.length > 0 && faces.forEach(face => {
+					this.drawRect(face.boundingBox, aspect);
+				})
+			}
+
+			/*
+			 * 绘制 rect
+			 * param {object} rect 需要绘制的 rect
+			 */
+			drawRect(rect={}, aspect = 1) {
+				this.ctx.save()
+				this.ctx.beginPath();
+				this.ctx.lineWidth = rect.lineWidth || 2;
+				this.ctx.strokeStyle = rect.color || 'red';
+				this.ctx.rect(Math.floor(rect.x * aspect),
+								Math.floor(rect.y * aspect),
+								Math.floor(rect.width * aspect),
+								Math.floor(rect.height * aspect)
+							);
+				this.ctx.stroke();
+				this.ctx.restore();
+			}
+
+			/*
+			 * 绘制文字
+			 */
 			drawText(text, x, y, color='white') {
 				this.ctx.save();
 				this.ctx.fillStyle = color;
-				this.ctx.font = '48px serif';
+				this.ctx.font = '24px serif';
 				this.ctx.textBaseline = 'top';
 				this.ctx.fillText(text, x, y)
 				this.ctx.restore();
 			}
 
-			clearRect(s, e, w, h) {
-				this.ctx && this.ctx.clearRect(s, e, w, h);
+			/*
+			 * 清除
+			 */
+			clearRect(x=0, y=0, w=this.canvas.width, h=this.canvas.height) {
+				this.ctx && this.ctx.clearRect(x, y, w, h);
 			}
 		}
 	</script>
