@@ -56,12 +56,64 @@
 				transform: translateY(-35px);
 			}
 		}
+		table {
+			border-collapse: collapse;
+		}
+		td,
+		th {
+			border: 1px solid #000;
+			text-align: center;
+		}
+		td:first-child {
+			text-align: left;
+		}
 	</style>
 </head>
 <body>
 	<div>
-		<h2>Tips: 由于 Shape Detection API 仍在试验阶段，请在 <a href='https://github.com/WICG/shape-detection-api/blob/gh-pages/README.md'>https://github.com/WICG/shape-detection-api/blob/gh-pages/README.md</a> 提到的设备中查看此 demo</h2>
-		<img src="./img/code.png" />
+		<h2>Tips:</h2>
+		Shape Detection API 仍在实验阶段，平台支持情况：
+		<table>
+		 	<thead>
+		 		<th width='130'>Encoder</th>
+		 		<th width='100'>Mac</th>
+		 		<th width='100'>Android</th>
+		 		<th width='100'>Win10</th>
+		 		<th width='100'>Linux</th>
+		 		<th width='100'>ChromeOs</th>
+		 	</thead>
+		 	<tbody>
+		 		<tr>
+			 		<td>Face</td>
+		 			<td>sw</td>
+		 			<td>hw/sw</td>
+		 			<td>sw</td>
+		 			<td>-</td>
+		 			<td>-</td>
+		 		</tr>
+		 		<tr>
+			 		<td>QR/Barcode</td>
+		 			<td>sw</td>
+		 			<td>sw</td>
+		 			<td>-</td>
+		 			<td>-</td>
+		 			<td>-</td>
+		 		</tr>
+		 		<tr>
+			 		<td>Text</td>
+		 			<td>sw</td>
+		 			<td>sw</td>
+		 			<td>sw</td>
+		 			<td>-</td>
+		 			<td>-</td>
+		 		</tr>
+		 	</tbody>
+		</table>
+		<p>sw: software  hw: hardware</p>
+		更多可查看<a href='https://github.com/WICG/shape-detection-api/blob/gh-pages/README.md' target='_blank'>https://github.com/WICG/shape-detection-api/blob/gh-pages/README.md</a>
+		<p>本 demo 二维码：</p>
+		<img src="./img/code.png"/>
+		<p>-----------------------------------------华丽的分割线-----------------------------------------</p>
 	</div>
 	<div class='file-container'>
 		<input type='file' multiple id='file'/>
