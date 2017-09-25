@@ -226,9 +226,9 @@
 
 			/*
 			 * 创建 canvas 和 ctx
-			 * param {string} className canvas类名  'imgCanvas' 和 'signCanvas'
-			 * param {object} opt canvas的尺寸
-			 * return {object} canvas && ctx
+			 * @param {string} className canvas类名  'imgCanvas' 和 'signCanvas'
+			 * @param {object} opt canvas的尺寸
+			 * @return {object} canvas && ctx
 			 */
 			createOpt(className, opt) {
 				let canvas = document.createElement('canvas');
@@ -281,8 +281,8 @@
 
 			/*
 			 * 面部检测
-			 * param {number} aspect 图片压缩比例
-			 * return {Array} 检测到的面部
+			 * @param {number} aspect 图片压缩比例
+			 * @return {Array} 检测到的面部
 			 */
 			faceDetector(aspect = 1) {
 				return new Promise((resolve, reject) => {
@@ -340,10 +340,10 @@
 
 			/*
 			 * 查找(x,y)是否在某个面部区域内
-			 * param {Image} img 需要检测的图像
-			 * param {Number} x 横坐标
-			 * param {Number} y 纵坐标
-			 * return {DetectorFce | String} 检测结果 
+			 * @param {Image} img 需要检测的图像
+			 * @param {Number} x 横坐标
+			 * @param {Number} y 纵坐标
+			 * @return {DetectorFce | String} 检测结果 
 			 */
 			findFace(img, x, y) {
 				return new Promise((resolve, reject) => {
@@ -373,7 +373,7 @@
 
 			/*
 			 * 面部高亮
-			 * param {DetectorFce} face 需要高亮的部分
+			 * @param {DetectorFce} face 需要高亮的部分
 			 */
 			heightLighRect(face) {
 				let box = face.boundingBox;
@@ -512,7 +512,7 @@
 
 			/*
 			 * 标识面部
-			 * param {Array} faces 需要标识的部分
+			 * @param {Array} faces 需要标识的部分
 			 */
 			drawFaces(faces=[], aspect = 1) {
 				faces.length > 0 && faces.forEach(face => {
@@ -522,7 +522,7 @@
 
 			/*
 			 * 绘制 rect
-			 * param {object} rect 需要绘制的 rect
+			 * @param {object} rect 需要绘制的 rect
 			 */
 			drawRect(rect={}, aspect = 1) {
 				this.ctx.save()
