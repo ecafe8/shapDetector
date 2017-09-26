@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebRTC</title>
+	<style>
+		body {
+			padding: 0;
+		}
+		canvas {
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+	</style>
+</head>
+<body>
+	<video id='video' autoplay></video>
+	<canvas id='canvas' width=500 height=500></canvas>
+	<canvas id='canvas2' width=500 height=500></canvas>
+	<script>
+		window.onload = () => {
+			let canvas = document.getElementById('canvas');
+			let ctx = canvas.getContext('2d');
+			let faceDetector = new FaceDetector({
+				fastMode: true
+			});
+
+			let img = new Image();
+			let canvas2 = document.getElementById('canvas2');
+			let ctx2 = canvas2.getContext('2d');
+
+			let video = document.getElementById('video');
+			let constraints = {
+				video: {
+					mandatory: {
+						maxWidth: 500,
+						maxHeight: 500
+					}
+				}
+			}
+
+			let timer;
+
+			function successCb(stream) {
+				video.src = window.URL.createObjectURL(stream);
+				drawImage()
+			}
+
+			function errorCb(err) {
+				console.log(err);
+			}
+
+			navigator.getUserMedia(constraints, successCb, errorCb);
+
+			function drawImage() {
+				timer = requestAnimationFrame(drawImage);
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				ctx.drawImage(video, 0, 0);
+				img.onload = () => {
+					detect()
+				};
+				img.src = canvas.toDataURL('image/png');
+			}
+
+			function detect() {
+				faceDetector.detect(img)
+					.then(face => {
+						let box = face.boundingBox
+						ctx2.drawRect(box.x, box.y, box.width, box.height);
+					})
+					.catch(err => {
+						console.log(err);
+						cancelAnimationFrame(timer)
+					})
+			}
+
+		}
+	</script>
+</body>
+</html>
