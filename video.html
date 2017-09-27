@@ -64,9 +64,11 @@
 
 			function detect() {
 				faceDetector.detect(img)
-					.then(face => {
-						let box = face.boundingBox
-						ctx2.drawRect(box.x, box.y, box.width, box.height);
+					.then(faces => {
+						faces.forEach(face => {
+							let box = face.boundingBox;
+							ctx2.drawRect(box.x, box.y, box.width, box.height);
+						})
 					})
 					.catch(err => {
 						console.log(err);

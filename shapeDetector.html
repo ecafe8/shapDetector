@@ -355,19 +355,14 @@
 						reject('none');
 					}
 
-					let indexFace = null;
-					this.faces.forEach(face => {
-						let box = face.boundingBox;
+					for(let i = 0, len = this.faces.length; i < len; ++i) {
+						let box = this.faces[i].boundingBox;
 						if(x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) {
-							indexFace =  face;
+							resolve(this.faces[i]);
 						}
-					})
-
-					if(indexFace === null) {
-						reject('none');
-					}else {
-						resolve(indexFace);
 					}
+
+					reject('none');
 				})
 			}
 
