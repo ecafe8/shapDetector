@@ -66,6 +66,7 @@
 				faceDetector.detect(img)
 					.then(faces => {
 						faces.forEach(face => {
+							ctx2.clearRect(0, 0, canvas2.width, canvas.height);
 							let box = face.boundingBox;
 							ctx2.beginPath();
 							ctx2.save();
