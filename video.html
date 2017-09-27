@@ -2,9 +2,12 @@
 <html>
 <head>
 	<title>WebRTC</title>
+	<meta charset="utf-8">
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0'>
 	<style>
 		body {
 			padding: 0;
+			margin: 0;
 		}
 		canvas {
 			position: absolute;
@@ -14,11 +17,19 @@
 	</style>
 </head>
 <body>
-	<video id='video' autoplay></video>
+	<div id='container'></div>
+	<select id='decoration'>
+		<option>bowknot</option>
+		<option>hat</option>
+		<!-- <option>none</option> -->
+	</select>
 	<canvas id='canvas' style='display: none' width=500 height=500></canvas>
-	<canvas id='canvas2' width=500 height=500></canvas>
+	<canvas id='canvas2' style='display: none' width=500 height=500></canvas>
 	<script>
 		window.onload = () => {
+			let canWidth = 0;
+			let canHeight = 0;
+
 			let canvas = document.getElementById('canvas');
 			let ctx = canvas.getContext('2d');
 			let faceDetector = new FaceDetector({
@@ -29,15 +40,21 @@
 			let canvas2 = document.getElementById('canvas2');
 			let ctx2 = canvas2.getContext('2d');
 
-			let video = document.getElementById('video');
-			let constraints = {
-				video: {
-					mandatory: {
-						maxWidth: 500,
-						maxHeight: 500
-					}
-				}
+			let bowknot = new Image();
+			let WIDTH = 0;
+			let HEIGHT = 0;
+			bowknot.src = './img/bowknot1.png';
+			bowknot.onload = () => {
+				WIDTH = bowknot.width;
+				HEIGHT = bowknot.height;
 			}
+
+			let decoration = document.getElementById('decoration');
+			decoration.addEventListener('change', () => {
+				// bowknot.src = `./img/${decoration.value}.png`;
+				videoDecoration.setDressImg(`${decoration.value}.png`);
+			})
+
 
 			let timer;
 
@@ -46,20 +63,16 @@
 				drawImage()
 			}
 
-			function errorCb(err) {
-				console.log(err);
-			}
-
-			navigator.getUserMedia(constraints, successCb, errorCb);
-
 			function drawImage() {
 				timer = requestAnimationFrame(drawImage);
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
 				ctx.drawImage(video, 0, 0);
 				img.onload = () => {
-					detect()
+					detect();
+					ctx2.clearRect(0, 0, canvas2.width, canvas.height);
+					ctx2.drawImage(bowknot, 0, 0, bowknot.width, bowknot.height, 150, 80, bowknot.width, bowknot.height)
 				};
-				img.src = canvas.toDataURL('image/png');
+				img.src = canvas.toDataURL('image/jpeg');
 			}
 
 			function detect() {
@@ -81,6 +94,178 @@
 						console.log(err);
 						cancelAnimationFrame(timer)
 					})
+			}
+
+			class Decoration {
+				constructor(container=document.body, opt={}) {
+					let videoOpt = {
+						width: {
+							min: 320
+						},
+						height: {
+							min: 240
+						}
+					}
+					Object.assign(videoOpt, opt);
+
+					this.container = container;
+
+					this.getUserMedia(videoOpt);
+
+					// canvas 是否已调整大小
+					this.initResize = false;
+					// video 尺寸
+					this.videoSize = {
+						width: 0,
+						height: 0
+					};
+
+					// this.img 保存视频图像信息
+					this.img = {
+						img: new Image()
+					};
+					[this.img.canvas, this.img.ctx] = this.createCanvas();
+
+					// this.dress.canvas 绘制装饰物
+					this.dress = {
+						img: new Image()
+					};
+					this.dress.img.src = './img/bowknot.png';
+					[this.dress.canvas, this.dress.ctx] = this.createCanvas(true);
+
+					this.detector = new FaceDetector({
+						fastMode: true
+					});
+				}
+
+				/*
+				 * 获取视频流
+				 * @param {Object} opt video 的参数
+				 */
+				getUserMedia(opt) {
+					navigator.mediaDevices.getUserMedia({
+						video: opt
+					}).then(stream => {
+						this.createVideo(stream);
+						streamToImg();
+					}).catch(err => {
+						alert(err);
+					})
+				}
+
+				/*
+				 * 创建 video 标签
+				 * @param {Object} stream 视频流
+				 */
+				createVideo(stream) {
+					this.video = document.createElement('video');
+					this.video.autoplay = 'autoplay';
+					this.video.onload = streamToImg;
+					this.video.src = window.URL.createObjectURL(stream);
+					this.container.appendChild(this.video);
+				}
+
+				/*
+				 * 创建 canvas && ctx
+				 */
+				createCanvas(isShow=false) {
+					let canvas = document.createElement('canvas');
+					let ctx = canvas.getContext('2d');
+
+					canvas.style.display = isShow ? '' : 'none';
+					this.container.appendChild(canvas);
+
+					return [canvas, ctx];
+				}
+
+				/*
+				 * 调整 canvas 尺寸
+				 */
+				resizeCanvas(canvas, w=0, h=0) {
+					if(!canvas) {
+						return;
+					}
+					canvas.width = w;
+					canvas.height = h;
+				}
+
+				streamToImg(currentTimer) {
+					if(!this.video.videoWidth) {
+						return;	
+					}
+
+					this.videoSize = {
+						width: this.video.videoWidth,
+						height: this.video.videoHeight
+					}
+
+					if(!this.initResize) {
+						this.initResize = true;
+						this.resizeCanvas(this.img.canvas, this.videoSize.width, this.videoSize.height);
+						this.resizeCanvas(this.dress.canvas, this.videoSize.width, this.videoSize.height);
+					}
+
+					this.updateStreamData();
+					this.detect(currentTimer);
+				}
+
+				updateStreamData() {
+					this.img.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
+					this.img.ctx.drawImage(this.video, 0, 0);
+				}
+
+				updateDressing(sx, sy) {
+					if(!this.dress.img.src) {
+						return;
+					}
+
+					let width = this.dress.img.width,
+						height = this.dress.img.height;
+
+					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, sx, sy, width, height);
+				}
+
+				detect(currentTimer) {
+					this.getStreamImg().then(img => {
+							this.detector.detect(img)
+								.then(faces => {
+									if(faces.length !== 0) {
+										this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
+										faces.forEach(face => {
+											let box = face.boundingBox;
+											this.updateDressing(box.x, box.y + 50);
+											
+										})
+									}else {
+										this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
+									}
+								}).catch(err => {
+									console.log(err);
+									cancelAnimationFrame(currentTimer)
+								})
+						})
+				}
+
+				getStreamImg() {
+					return new Promise((resolve, reject) => {
+						this.img.img.onload = () => {
+							resolve(this.img.img);
+						}
+						this.img.img.src = this.img.canvas.toDataURL('image/jpeg');
+					})
+				}
+
+				setDressImg(url) {
+					this.dress.img.src = /^(http|https):\/\/\w+/.test(url) ? url : `./img/${url}`;
+				}
+			}
+
+			let videoDecoration = new Decoration(document.getElementById('container'));
+
+			let currentTimer = null;
+			function streamToImg() {
+				currentTimer = requestAnimationFrame(streamToImg);
+				videoDecoration.streamToImg(currentTimer);
 			}
 
 		}
