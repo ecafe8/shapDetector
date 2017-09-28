@@ -214,7 +214,8 @@
 						height = this.dress.img.height,
 						scale = this.dress.canvas.width * 1.2 / width;
 
-					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 50, box.width* scale, height * scale);
+					this.dress.ctx.rect(box.x, box.y, box.width, box.height)
+					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 50, box.width, height);
 				}
 
 				detect(currentTimer) {
