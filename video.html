@@ -21,72 +21,12 @@
 	<select id='decoration'>
 		<option>bowknot</option>
 		<option>hat</option>
-		<!-- <option>none</option> -->
+		<option>none</option>
 	</select>
-	<canvas id='canvas' style='display: none' width=500 height=500></canvas>
-	<canvas id='canvas2' style='display: none' width=500 height=500></canvas>
+	<button id='sure'>确定</button>
+	<img src="" id='photo'>
 	<script>
 		window.onload = () => {
-			let canWidth = 0;
-			let canHeight = 0;
-
-			let canvas = document.getElementById('canvas');
-			let ctx = canvas.getContext('2d');
-			let faceDetector = new FaceDetector({
-				fastMode: true
-			});
-
-			let img = new Image();
-			let canvas2 = document.getElementById('canvas2');
-			let ctx2 = canvas2.getContext('2d');
-
-			let bowknot = new Image();
-			let WIDTH = 0;
-			let HEIGHT = 0;
-			bowknot.src = './img/bowknot1.png';
-			bowknot.onload = () => {
-				WIDTH = bowknot.width;
-				HEIGHT = bowknot.height;
-			}
-
-			let decoration = document.getElementById('decoration');
-			decoration.addEventListener('change', () => {
-				videoDecoration.setDressImg(`${decoration.value}.png`);
-			})
-
-
-			function drawImage() {
-				timer = requestAnimationFrame(drawImage);
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
-				ctx.drawImage(video, 0, 0);
-				img.onload = () => {
-					detect();
-					ctx2.clearRect(0, 0, canvas2.width, canvas.height);
-					ctx2.drawImage(bowknot, 0, 0, bowknot.width, bowknot.height, 150, 80, bowknot.width, bowknot.height)
-				};
-				img.src = canvas.toDataURL('image/jpeg');
-			}
-
-			function detect() {
-				faceDetector.detect(img)
-					.then(faces => {
-						faces.forEach(face => {
-							ctx2.clearRect(0, 0, canvas2.width, canvas.height);
-							let box = face.boundingBox;
-							ctx2.beginPath();
-							ctx2.save();
-							ctx2.lineWidth = 2;
-							ctx2.strokeStyle = 'red';
-							ctx2.rect(box.x, box.y, box.width, box.height);
-							ctx2.stroke();
-							ctx2.restore();
-						})
-					})
-					.catch(err => {
-						console.log(err);
-					})
-			}
-
 			class Decoration {
 				constructor(container=document.body, opt={}) {
 					let videoOpt = {
@@ -125,11 +65,13 @@
 					[this.dress.canvas, this.dress.ctx] = this.createCanvas(true);
 
 					this.detector = new FaceDetector({
+						maxDetectedFaces: 2,
 						fastMode: true
 					});
 
 					this.resizeTimer = null;
 					this.refreshTimer = null;
+					this.canDetect = true;
 				}
 
 				/*
@@ -175,7 +117,6 @@
 				 * 调整 canvas 大小至 video 尺寸
 				 */
 				initResizeCanvas() {
-					console.log(this.video.videoWidth)
 					if(this.video.videoWidth !== 0) {
 						cancelAnimationFrame(this.resizeTimer);
 
@@ -206,7 +147,7 @@
 
 				streamToImg() {
 					this.updateStreamData();
-					this.detect();
+					this.canDetect && this.detect();
 				}
 
 				updateStreamData() {
@@ -222,15 +163,12 @@
 					let width = this.dress.img.width,
 						height = this.dress.img.height,
 						scale = box.width * 1.2 / width;
-						console.log(scale)
 
 					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 60, box.width, height);
 				}
 
 				detect() {
 					this.getStreamImg().then(img => {
-						console.log(img.width)
-						console.log(img.height)
 							this.detector.detect(img)
 								.then(faces => {
 									if(faces.length !== 0) {
@@ -244,7 +182,8 @@
 									}
 								}).catch(err => {
 									console.log(err);
-									cancelAnimationFrame(this.refreshTimer)
+									this.canDetect = false;
+									// cancelAnimationFrame(this.refreshTimer);
 								})
 						})
 				}
@@ -258,12 +197,53 @@
 					})
 				}
 
+				getDressImg() {
+					return new Promise((resolve, reject) => {
+						let img = new Image();
+						img.onload = () => {
+							resolve(this.img.img);
+						}
+						img.src = this.dress.canvas.toDataURL('image/png');
+					})
+				}
+
+				getImg() {
+					return new Promise((resolve, reject) => {
+						if(this.canDetect) {
+							this.getDressImg().then(img => {
+								this.img.ctx.drawImage(img, 0, 0);
+								resolve(this.img.canvas.toDataURL('image/jpeg'));
+							})
+						}else {
+							resolve(this.img.canvas.toDataURL('image/jpeg'));
+						}
+					})
+				}
+
 				setDressImg(url) {
-					this.dress.img.src = /^(http|https):\/\/\w+/.test(url) ? url : `./img/${url}`;
+					if(url !== 'none') {
+						this.dress.img.src = /^(http|https):\/\/\w+/.test(url) ? url : `./img/${url}`;
+					}else {
+						this.dress.img.src = '';
+					}
 				}
 			}
 
 			let videoDecoration = new Decoration(document.getElementById('container'));
+
+			let photo = document.getElementById('photo');
+			let sureBtn = document.getElementById('sure');
+
+			let decoration = document.getElementById('decoration');
+			decoration.addEventListener('change', () => {
+				videoDecoration.setDressImg(`${decoration.value}.png`);
+			})
+
+			sureBtn.addEventListener('click', () => {
+				videoDecoration.getImg().then(src => {
+					photo.src = src
+				})
+			})
 
 			function resizeCanvas() {
 				videoDecoration.resizeTimer = requestAnimationFrame(resizeCanvas);
