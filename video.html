@@ -176,7 +176,7 @@
 				 * 调整 canvas 大小至 video 尺寸
 				 */
 				initResizeCanvas() {
-					if(!this.video.videoWidth) {
+					if(this.video.videoWidth !== 0) {
 						cancelAnimationFrame(this.resizeTimer);
 
 						this.videoSize = {
