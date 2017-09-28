@@ -91,7 +91,7 @@
 				constructor(container=document.body, opt={}) {
 					let videoOpt = {
 						width: {
-							min: 320
+							max: 320,
 						},
 						height: {
 							min: 240
@@ -141,7 +141,7 @@
 						video: opt
 					}).then(stream => {
 						this.createVideo(stream);
-						streamToImg();
+						resizeCanvas();
 					}).catch(err => {
 						alert(err);
 					})
@@ -154,7 +154,6 @@
 				createVideo(stream) {
 					this.video = document.createElement('video');
 					this.video.autoplay = 'autoplay';
-					this.video.onload = streamToImg;
 					this.video.src = window.URL.createObjectURL(stream);
 					this.container.appendChild(this.video);
 				}
@@ -176,6 +175,7 @@
 				 * 调整 canvas 大小至 video 尺寸
 				 */
 				initResizeCanvas() {
+					console.log(this.video.videoWidth)
 					if(this.video.videoWidth !== 0) {
 						cancelAnimationFrame(this.resizeTimer);
 
@@ -204,9 +204,9 @@
 					canvas.height = h;
 				}
 
-				streamToImg(currentTimer) {
+				streamToImg() {
 					this.updateStreamData();
-					this.detect(currentTimer);
+					this.detect();
 				}
 
 				updateStreamData() {
@@ -223,10 +223,10 @@
 						height = this.dress.img.height,
 						scale = this.dress.canvas.width * 1.2 / width;
 
-					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 80, box.width, height);
+					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 60, box.width, height);
 				}
 
-				detect(currentTimer) {
+				detect() {
 					this.getStreamImg().then(img => {
 							this.detector.detect(img)
 								.then(faces => {
@@ -262,14 +262,13 @@
 
 			let videoDecoration = new Decoration(document.getElementById('container'));
 
-			let currentTimer = null;
 			function resizeCanvas() {
 				videoDecoration.resizeTimer = requestAnimationFrame(resizeCanvas);
 				videoDecoration.initResizeCanvas();
 			}
 			function streamToImg() {
 				videoDecoration.refreshTimer = requestAnimationFrame(streamToImg);
-				videoDecoration.streamToImg(currentTimer);
+				videoDecoration.streamToImg();
 			}
 
 		}
