@@ -51,17 +51,9 @@
 
 			let decoration = document.getElementById('decoration');
 			decoration.addEventListener('change', () => {
-				// bowknot.src = `./img/${decoration.value}.png`;
 				videoDecoration.setDressImg(`${decoration.value}.png`);
 			})
 
-
-			let timer;
-
-			function successCb(stream) {
-				video.src = window.URL.createObjectURL(stream);
-				drawImage()
-			}
 
 			function drawImage() {
 				timer = requestAnimationFrame(drawImage);
@@ -92,7 +84,6 @@
 					})
 					.catch(err => {
 						console.log(err);
-						cancelAnimationFrame(timer)
 					})
 			}
 
@@ -214,15 +205,16 @@
 					this.img.ctx.drawImage(this.video, 0, 0);
 				}
 
-				updateDressing(sx, sy) {
+				updateDressing(box) {
 					if(!this.dress.img.src) {
 						return;
 					}
 
 					let width = this.dress.img.width,
-						height = this.dress.img.height;
+						height = this.dress.img.height,
+						scale = this.dress.canvas.width * 1.2 / width;
 
-					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, sx, sy, width, height);
+					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 50, box.width* scale, height * scale);
 				}
 
 				detect(currentTimer) {
@@ -232,8 +224,7 @@
 									if(faces.length !== 0) {
 										this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
 										faces.forEach(face => {
-											let box = face.boundingBox;
-											this.updateDressing(box.x, box.y + 50);
+											this.updateDressing(face.boundingBox);
 											
 										})
 									}else {
