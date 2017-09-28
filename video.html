@@ -127,6 +127,9 @@
 					this.detector = new FaceDetector({
 						fastMode: true
 					});
+
+					this.resizeTimer = null;
+					this.refreshTimer = null;
 				}
 
 				/*
@@ -170,6 +173,27 @@
 				}
 
 				/*
+				 * 调整 canvas 大小至 video 尺寸
+				 */
+				initResizeCanvas() {
+					if(!this.video.videoWidth) {
+						cancelAnimationFrame(this.resizeTimer);
+
+						this.videoSize = {
+							width: this.video.videoWidth,
+							height: this.video.videoHeight
+						}
+
+						if(!this.initResize) {
+							this.initResize = true;
+							this.resizeCanvas(this.img.canvas, this.videoSize.width, this.videoSize.height);
+							this.resizeCanvas(this.dress.canvas, this.videoSize.width, this.videoSize.height);
+						}
+						streamToImg();
+					}
+				}
+
+				/*
 				 * 调整 canvas 尺寸
 				 */
 				resizeCanvas(canvas, w=0, h=0) {
@@ -181,21 +205,6 @@
 				}
 
 				streamToImg(currentTimer) {
-					if(!this.video.videoWidth) {
-						return;	
-					}
-
-					this.videoSize = {
-						width: this.video.videoWidth,
-						height: this.video.videoHeight
-					}
-
-					if(!this.initResize) {
-						this.initResize = true;
-						this.resizeCanvas(this.img.canvas, this.videoSize.width, this.videoSize.height);
-						this.resizeCanvas(this.dress.canvas, this.videoSize.width, this.videoSize.height);
-					}
-
 					this.updateStreamData();
 					this.detect(currentTimer);
 				}
@@ -214,8 +223,7 @@
 						height = this.dress.img.height,
 						scale = this.dress.canvas.width * 1.2 / width;
 
-					this.dress.ctx.rect(box.x, box.y, box.width, box.height)
-					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 50, box.width, height);
+					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 80, box.width, height);
 				}
 
 				detect(currentTimer) {
@@ -233,7 +241,7 @@
 									}
 								}).catch(err => {
 									console.log(err);
-									cancelAnimationFrame(currentTimer)
+									cancelAnimationFrame(this.refreshTimer)
 								})
 						})
 				}
@@ -255,8 +263,12 @@
 			let videoDecoration = new Decoration(document.getElementById('container'));
 
 			let currentTimer = null;
+			function resizeCanvas() {
+				videoDecoration.resizeTimer = requestAnimationFrame(resizeCanvas);
+				videoDecoration.initResizeCanvas();
+			}
 			function streamToImg() {
-				currentTimer = requestAnimationFrame(streamToImg);
+				videoDecoration.refreshTimer = requestAnimationFrame(streamToImg);
 				videoDecoration.streamToImg(currentTimer);
 			}
 
