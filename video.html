@@ -221,13 +221,16 @@
 
 					let width = this.dress.img.width,
 						height = this.dress.img.height,
-						scale = this.dress.canvas.width * 1.2 / width;
+						scale = box.width * 1.2 / width;
+						console.log(scale)
 
 					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 60, box.width, height);
 				}
 
 				detect() {
 					this.getStreamImg().then(img => {
+						console.log(img.width)
+						console.log(img.height)
 							this.detector.detect(img)
 								.then(faces => {
 									if(faces.length !== 0) {
