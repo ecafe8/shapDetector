@@ -63,7 +63,7 @@
 					this.dress.img.src = './img/bowknot.png';
 					[this.dress.canvas, this.dress.ctx] = this.createCanvas(true);
 
-					this.detector =  new Worker('detector.js');
+					this.createWebWorker();
 					// new FaceDetector({
 					// 	maxDetectedFaces: 2,
 					// 	fastMode: true
@@ -144,7 +144,23 @@
 					canvas.height = h;
 				}
 
+				createWebWorker() {
+					this.detector =  new Worker('detector.js');
+
+					this.detector.onmessage = (msg) => {
+						if(msg.data.status === 0) {
+							this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
+							[].forEach.call(msg.data.faces, (face) => {
+				 				this.updateDressing(face.boundingBox);
+							})
+						}else {
+							cancelAnimationFrame(this.resizeTimer)
+						}
+					}
+				}
+
 				streamToImg() {
+					// console.log('ok')
 					this.updateStreamData();
 					this.detect();
 				}

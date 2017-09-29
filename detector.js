@@ -4,14 +4,15 @@ let detector = new FaceDetector({
 				});
 let i = 0;
 onmessage = (e) => {
-	if(i <= 0) {
-		console.log(e.data)
-		detector.detect(e.data).then(faces => {
-					console.log(faces)
-				}).catch(err => {
-					console.log(err)
-				})
-
-		++i;
-	}
+	detector.detect(e.data).then(faces => {
+				console.log(faces)
+				postMessage({
+					status: 0,
+					data: faces
+				});
+			}).catch(err => {
+				console.log(err);
+				postMessage({status: 1});
+				this.close();
+			})
 }
