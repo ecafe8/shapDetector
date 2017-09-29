@@ -221,7 +221,7 @@
 				}
 
 				setDressImg(url) {
-					if(url !== 'none') {
+					if(!/^none/.test(url)) {
 						this.dress.img.src = /^(http|https):\/\/\w+/.test(url) ? url : `./img/${url}`;
 					}else {
 						this.dress.img.src = '';
