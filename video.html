@@ -63,14 +63,14 @@
 					this.dress.img.src = './img/bowknot.png';
 					[this.dress.canvas, this.dress.ctx] = this.createCanvas(true);
 
-					this.detector = new FaceDetector({
-						maxDetectedFaces: 2,
-						fastMode: true
-					});
+					this.detector =  new Worker('detector.js');
+					// new FaceDetector({
+					// 	maxDetectedFaces: 2,
+					// 	fastMode: true
+					// });
 
 					this.resizeTimer = null;
 					this.refreshTimer = null;
-					this.canDetect = true;
 				}
 
 				/*
@@ -146,7 +146,7 @@
 
 				streamToImg() {
 					this.updateStreamData();
-					this.canDetect && this.detect();
+					this.detect();
 				}
 
 				updateStreamData() {
@@ -168,22 +168,22 @@
 
 				detect() {
 					this.getStreamImg().then(img => {
-							this.detector.detect(img)
-								.then(faces => {
-									if(faces.length !== 0) {
-										this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
-										faces.forEach(face => {
-											this.updateDressing(face.boundingBox);
+							// this.detector.detect(img)
+							// 	.then(faces => {
+							// 		if(faces.length !== 0) {
+							// 			this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
+							// 			faces.forEach(face => {
+							// 				this.updateDressing(face.boundingBox);
 											
-										})
-									}else {
-										this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
-									}
-								}).catch(err => {
-									console.log(err);
-									// this.canDetect = false;
-									cancelAnimationFrame(this.refreshTimer);
-								})
+							// 			})
+							// 		}else {
+							// 			this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
+							// 		}
+							// 	}).catch(err => {
+							// 		console.log(err);
+							// 		cancelAnimationFrame(this.refreshTimer);
+							// 	})
+							this.detector.postMessage(this.img.ctx.getImageData(0, 0, this.videoSize.width, this.videoSize.height));
 						})
 				}
 
@@ -208,15 +208,10 @@
 
 				getImg() {
 					return new Promise((resolve, reject) => {
-						if(this.canDetect) {
-							console.log(this.canDetect)
-							this.getDressImg().then(img => {
-								this.img.ctx.drawImage(img, 0, 0);
-								resolve(this.img.canvas.toDataURL('image/jpeg'));
-							})
-						}else {
+						this.getDressImg().then(img => {
+							this.img.ctx.drawImage(img, 0, 0);
 							resolve(this.img.canvas.toDataURL('image/jpeg'));
-						}
+						})
 					})
 				}
 
