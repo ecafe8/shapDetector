@@ -64,10 +64,6 @@
 					[this.dress.canvas, this.dress.ctx] = this.createCanvas(true);
 
 					this.createWebWorker();
-					// new FaceDetector({
-					// 	maxDetectedFaces: 2,
-					// 	fastMode: true
-					// });
 
 					this.resizeTimer = null;
 					this.refreshTimer = null;
@@ -178,25 +174,13 @@
 					}
 
 					let width = this.dress.img.width,
-						height = this.dress.img.height,
-						scale = box.width * 1.2 / width;
+						height = this.dress.img.height;
 
 					this.dress.ctx.drawImage(this.dress.img, 0, 0, width, height, box.x, box.y - 60, box.width, height);
 				}
 
 				detect() {
-					this.getStreamImg().then(img => {
-							this.detector.postMessage(this.img.ctx.getImageData(0, 0, this.videoSize.width, this.videoSize.height));
-						})
-				}
-
-				getStreamImg() {
-					return new Promise((resolve, reject) => {
-						this.img.img.onload = () => {
-							resolve(this.img.img);
-						}
-						this.img.img.src = this.img.canvas.toDataURL('image/jpeg');
-					})
+					this.detector.postMessage(this.img.ctx.getImageData(0, 0, this.videoSize.width, this.videoSize.height));
 				}
 
 				getDressImg() {
@@ -224,8 +208,6 @@
 					}else {
 						this.dress.img.src = '';
 					}
-					console.log(url)
-					console.log(this.dress.img.src)
 				}
 			}
 
