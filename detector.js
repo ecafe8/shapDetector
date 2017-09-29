@@ -25,6 +25,7 @@ onmessage = e => {
 				});
 			}).catch(err => {
 				console.log(err);
+				console.log(e.data)
 				postMessage({status: 1});
 			})
 }
