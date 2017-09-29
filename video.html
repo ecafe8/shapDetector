@@ -154,13 +154,13 @@
 				 				this.updateDressing(face.boundingBox);
 							})
 						}else {
-							cancelAnimationFrame(this.resizeTimer)
+							cancelAnimationFrame(this.refreshTimer);
+							this.detector.terminate();
 						}
 					}
 				}
 
 				streamToImg() {
-					// console.log('ok')
 					this.updateStreamData();
 					this.detect();
 				}
@@ -184,21 +184,6 @@
 
 				detect() {
 					this.getStreamImg().then(img => {
-							// this.detector.detect(img)
-							// 	.then(faces => {
-							// 		if(faces.length !== 0) {
-							// 			this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
-							// 			faces.forEach(face => {
-							// 				this.updateDressing(face.boundingBox);
-											
-							// 			})
-							// 		}else {
-							// 			this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
-							// 		}
-							// 	}).catch(err => {
-							// 		console.log(err);
-							// 		cancelAnimationFrame(this.refreshTimer);
-							// 	})
 							this.detector.postMessage(this.img.ctx.getImageData(0, 0, this.videoSize.width, this.videoSize.height));
 						})
 				}

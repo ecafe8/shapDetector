@@ -3,7 +3,7 @@ let detector = new FaceDetector({
 					fastMode: true
 				});
 let i = 0;
-onmessage = (e) => {
+onmessage = e => {
 	detector.detect(e.data).then(faces => {
 				console.log(faces)
 				postMessage({
@@ -13,6 +13,5 @@ onmessage = (e) => {
 			}).catch(err => {
 				console.log(err);
 				postMessage({status: 1});
-				this.close();
 			})
 }
