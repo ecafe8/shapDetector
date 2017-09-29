@@ -71,6 +71,8 @@
 
 					this.resizeTimer = null;
 					this.refreshTimer = null;
+
+					this.canDetect = true;
 				}
 
 				/*
@@ -151,18 +153,18 @@
 						if(msg.data.status === 0) {
 							this.dress.ctx.clearRect(0, 0, this.videoSize.width, this.videoSize.height);
 							[].forEach.call(msg.data.faces, (face) => {
-				 				this.updateDressing(face.boundingBox);
+				 				this.updateDressing(face);
 							})
 						}else {
-							cancelAnimationFrame(this.refreshTimer);
 							this.detector.terminate();
+							this.canDetect = false;
 						}
 					}
 				}
 
 				streamToImg() {
 					this.updateStreamData();
-					this.detect();
+					this.canDetect && this.detect();
 				}
 
 				updateStreamData() {

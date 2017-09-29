@@ -5,10 +5,23 @@ let detector = new FaceDetector({
 let i = 0;
 onmessage = e => {
 	detector.detect(e.data).then(faces => {
-				console.log(faces)
+				let faceArr = faces.map(face => {
+					let box = face.boundingBox;
+					let item = {
+						x: box.x,
+						y: box.y,
+						width: box.width,
+						height: box.height,
+						left: box.left,
+						right: box.left,
+						top: box.top,
+						bottom: box.bottom
+					}
+					return item;
+				})
 				postMessage({
 					status: 0,
-					data: faces
+					faces: faceArr
 				});
 			}).catch(err => {
 				console.log(err);
